@@ -17,6 +17,7 @@ target_link_libraries(${tgt} PRIVATE
 )
 set_target_properties(${tgt} PROPERTIES
         MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+        CMAKE_POSITION_INDEPENDENT_CODE ON
 )
 
 install(TARGETS ${tgt} LIBRARY DESTINATION lib)
