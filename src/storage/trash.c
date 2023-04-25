@@ -29,7 +29,7 @@ struct Trash
 };
 
 static enum DeviceState
-set(struct Storage* self_, const struct StorageProperties* settings)
+trash_set(struct Storage* self_, const struct StorageProperties* settings)
 {
     struct Trash* self = containerof(self_, struct Trash, writer);
     CHECK(storage_properties_copy(&self->settings, settings));
@@ -39,14 +39,30 @@ Error:
 }
 
 static void
-get(const struct Storage* self_, struct StorageProperties* settings)
+trash_get(const struct Storage* self_, struct StorageProperties* settings)
 {
     struct Trash* self = containerof(self_, struct Trash, writer);
     *settings = self->settings;
 }
 
+static void
+trash_get_meta(const struct Storage* self_,
+               struct StoragePropertyMetadata* meta)
+{
+    *meta = (struct StoragePropertyMetadata){
+        .file_control = { 0 },
+        .external_metadata = { 0 },
+        .first_frame_id =
+          (struct Property){
+            .writable = 1, .low = 0.0f, .type = PropertyType_FixedPrecision },
+        .pixel_scale = { 0 },
+        .chunking = { 0 },
+        .compression = { 0 },
+    };
+}
+
 static enum DeviceState
-start(struct Storage* self_)
+trash_start(struct Storage* self_)
 {
     struct Trash* self = containerof(self_, struct Trash, writer);
     self->iframe = self->settings.first_frame_id;
@@ -54,13 +70,15 @@ start(struct Storage* self_)
 }
 
 static enum DeviceState
-stop(struct Storage* self_)
+trash_stop(struct Storage* self_)
 {
     return DeviceState_Armed;
 }
 
 static enum DeviceState
-append(struct Storage* self_, const struct VideoFrame* frames, size_t* nbytes)
+trash_append(struct Storage* self_,
+             const struct VideoFrame* frames,
+             size_t* nbytes)
 {
     struct Trash* self = containerof(self_, struct Trash, writer);
 
@@ -80,7 +98,7 @@ append(struct Storage* self_, const struct VideoFrame* frames, size_t* nbytes)
 }
 
 static void
-destroy(struct Storage* self_)
+trash_destroy(struct Storage* self_)
 {
     struct Trash* self = containerof(self_, struct Trash, writer);
     free(self);
@@ -94,13 +112,46 @@ trash_init()
     memset(self, 0, sizeof(*self));
 
     self->writer = (struct Storage){ .state = DeviceState_AwaitingConfiguration,
-                                     .set = set,
-                                     .get = get,
-                                     .start = start,
-                                     .append = append,
-                                     .stop = stop,
-                                     .destroy = destroy };
+                                     .set = trash_set,
+                                     .get = trash_get,
+                                     .get_meta = trash_get_meta,
+                                     .start = trash_start,
+                                     .append = trash_append,
+                                     .stop = trash_stop,
+                                     .destroy = trash_destroy };
     return &self->writer;
 Error:
     return 0;
 }
+
+#ifndef NO_UNIT_TESTS
+
+#ifdef _WIN32
+#define acquire_export __declspec(dllexport)
+#else
+#define acquire_export
+#endif
+
+acquire_export int
+unit_test__trash_get_meta()
+{
+    int retval = 1;
+    struct Storage* trash = trash_init();
+    CHECK(NULL != trash);
+    CHECK(NULL != trash->get_meta);
+
+    struct StoragePropertyMetadata meta = { 0 };
+    trash_get_meta(trash, &meta);
+
+    CHECK(meta.first_frame_id.writable);
+
+Finalize:
+    if (NULL != trash)
+        free(trash);
+    trash = NULL;
+    return retval;
+Error:
+    retval = 0;
+    goto Finalize;
+}
+#endif

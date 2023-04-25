@@ -52,6 +52,10 @@ main()
     const std::vector<testcase> tests{
 #define CASE(e) { .name = #e, .test = (int (*)())lib_load(&lib, #e) }
         CASE(unit_test_basic_device_kind_to_string_is_complete),
+        CASE(unit_test__trash_get_meta),
+        CASE(unit_test__raw_get_meta),
+        CASE(unit_test__tiff_get_meta),
+        CASE(unit_test__side_by_side_tiff_get_meta),
 #undef CASE
     };
 
