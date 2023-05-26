@@ -14,6 +14,7 @@ else()
     set(tests
         can-load-driver-interface
         list-devices
+        storage-get-meta
         unit-tests
     )
 
@@ -29,6 +30,8 @@ else()
             acquire-core-platform
             acquire-core-logger
             acquire-device-kit
+            acquire-device-hal
+            acquire-device-properties
         )
         add_test(NAME test-${tgt} COMMAND ${tgt})
         set_tests_properties(test-${tgt} PROPERTIES LABELS anyplatform)

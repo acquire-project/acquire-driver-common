@@ -60,6 +60,7 @@ struct Tiff final : public Storage
 
     int set(const struct StorageProperties* settings) noexcept;
     void get(struct StorageProperties* settings) const noexcept;
+    static void get_meta(struct StoragePropertyMetadata* meta) noexcept;
     int start() noexcept;
     int stop() noexcept;
     int append(const struct VideoFrame* frames, size_t nbytes) noexcept;
@@ -313,22 +314,30 @@ header()
 }
 
 enum DeviceState
-set(struct Storage*, const struct StorageProperties* properties);
+tiff_set(struct Storage*, const struct StorageProperties* properties);
 
 void
-get(const struct Storage*, struct StorageProperties* settings);
-
-enum DeviceState
-start(struct Storage*);
-
-enum DeviceState
-append(struct Storage* self_, const struct VideoFrame* frame, size_t* nbytes);
-
-enum DeviceState
-stop(struct Storage*);
+tiff_get(const struct Storage*, struct StorageProperties* settings);
 
 void
-destroy(struct Storage*);
+tiff_get_meta(const struct Storage*, struct StoragePropertyMetadata* meta);
+
+enum DeviceState
+tiff_start(struct Storage*);
+
+enum DeviceState
+tiff_append(struct Storage* self_,
+            const struct VideoFrame* frame,
+            size_t* nbytes);
+
+enum DeviceState
+tiff_stop(struct Storage*);
+
+void
+tiff_destroy(struct Storage*);
+
+void
+tiff_reserve_image_shape(struct Storage*, const struct ImageShape* shape);
 
 size_t
 bytes_of_type(const enum SampleType type)
@@ -386,12 +395,15 @@ StringSection::reserve(size_t nbytes) noexcept
 Tiff::Tiff() noexcept
   : Storage{
     .state = DeviceState_AwaitingConfiguration,
-    .set = ::set,
-    .get = ::get,
-    .start = ::start,
-    .append = ::append,
-    .stop = ::stop,
-    .destroy = ::destroy,}
+    .set = ::tiff_set,
+    .get = ::tiff_get,
+    .get_meta = ::tiff_get_meta,
+    .start = ::tiff_start,
+    .append = ::tiff_append,
+    .stop = ::tiff_stop,
+    .destroy = ::tiff_destroy,
+    .reserve_image_shape = ::tiff_reserve_image_shape,
+  }
   , pixel_scale_um_{.x=1.0,.y=1.0}
   , file_{}
   , last_offset_(0)
@@ -456,6 +468,15 @@ Tiff::get(struct StorageProperties* settings) const noexcept
     settings->filename.str = (char*)filename_.c_str();
     settings->filename.nbytes = filename_.size();
     settings->pixel_scale_um = pixel_scale_um_;
+}
+
+void
+Tiff::get_meta(struct StoragePropertyMetadata* meta) noexcept
+{
+    CHECK(meta);
+    *meta = { 0 };
+Error:
+    return;
 }
 
 int
@@ -602,7 +623,7 @@ Error:
 }
 
 enum DeviceState
-set(struct Storage* self_, const struct StorageProperties* settings)
+tiff_set(struct Storage* self_, const struct StorageProperties* settings)
 {
     struct Tiff* self = (struct Tiff*)self_;
     if (self->set(settings))
@@ -612,14 +633,21 @@ set(struct Storage* self_, const struct StorageProperties* settings)
 }
 
 void
-get(const struct Storage* self_, struct StorageProperties* settings)
+tiff_get(const struct Storage* self_, struct StorageProperties* settings)
 {
     struct Tiff* self = (struct Tiff*)self_;
     self->get(settings);
 }
 
+void
+tiff_get_meta(const struct Storage* self_, struct StoragePropertyMetadata* meta)
+{
+    struct Tiff* self = (struct Tiff*)self_;
+    self->get_meta(meta);
+}
+
 enum DeviceState
-start(struct Storage* self_)
+tiff_start(struct Storage* self_)
 {
     struct Tiff* self = (struct Tiff*)self_;
     CHECK(self->start());
@@ -629,7 +657,7 @@ Error:
 }
 
 enum DeviceState
-stop(struct Storage* self_)
+tiff_stop(struct Storage* self_)
 {
     struct Tiff* self = (struct Tiff*)self_;
     CHECK(self->stop());
@@ -639,22 +667,29 @@ Error:
 }
 
 enum DeviceState
-append(struct Storage* self_, const struct VideoFrame* frames, size_t* nbytes)
+tiff_append(struct Storage* self_,
+            const struct VideoFrame* frames,
+            size_t* nbytes)
 {
     struct Tiff* self = (struct Tiff*)self_;
     CHECK(self->append(frames, *nbytes));
     return DeviceState_Running;
 Error:
-    return stop(self_);
+    return tiff_stop(self_);
 }
 
 void
-destroy(struct Storage* self_)
+tiff_destroy(struct Storage* self_)
 {
     struct Tiff* self = (struct Tiff*)self_;
     if (self_ && self_->stop)
         self_->stop(self_);
     delete self;
+}
+
+void
+tiff_reserve_image_shape(struct Storage* self_, const struct ImageShape* shape)
+{ // no-op
 }
 
 } // end namespace ::{anonymous}

@@ -3,6 +3,7 @@ project(acquire-driver-common)
 enable_testing()
 
 include(cmake/aq_require.cmake)
+include(cmake/git-versioning.cmake)
 include(cmake/ide.cmake)
 include(cmake/install-prefix.cmake)
 include(cmake/simd.cmake)
