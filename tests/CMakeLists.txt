@@ -1,7 +1,6 @@
 if(${NOTEST})
     message(STATUS "Skipping test targets")
 else()
-
     #
     # PARAMETERS
     #
@@ -22,9 +21,6 @@ else()
         set(tgt ${project}-${name})
         add_executable(${tgt} ${name}.cpp)
         target_compile_definitions(${tgt} PUBLIC "TEST=\"${tgt}\"")
-        set_target_properties(${tgt} PROPERTIES
-            MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
-        )
         target_include_directories(${tgt} PRIVATE "../src/simcams")
         target_link_libraries(${tgt}
             acquire-core-platform

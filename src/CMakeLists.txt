@@ -1,5 +1,5 @@
 if(NOT TARGET acquire-device-kit)
-    add_subdirectory(acquire-core-libs)
+        add_subdirectory(acquire-core-libs)
 endif()
 
 add_subdirectory(simcams)
@@ -16,9 +16,6 @@ target_link_libraries(${tgt} PRIVATE
         acquire-device-kit
         simcams
         storage
-)
-set_target_properties(${tgt} PROPERTIES
-        MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
 )
 
 install(TARGETS ${tgt} LIBRARY DESTINATION lib)

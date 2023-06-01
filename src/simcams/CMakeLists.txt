@@ -5,14 +5,11 @@ add_library(${tgt} STATIC
         simulated.camera.h
         simulated.camera.c
         popcount.cpp
-        )
+)
 target_enable_simd(${tgt})
 target_link_libraries(${tgt} PUBLIC
         acquire-core-logger
         acquire-core-platform
         acquire-device-kit
         pcg
-        )
-set_target_properties(${tgt} PROPERTIES
-        MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
-        )
+)
