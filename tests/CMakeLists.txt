@@ -30,7 +30,7 @@ else()
             acquire-device-properties
         )
         add_test(NAME test-${tgt} COMMAND ${tgt})
-        set_tests_properties(test-${tgt} PROPERTIES LABELS "anyplatform;driver-common")
+        set_tests_properties(test-${tgt} PROPERTIES LABELS "anyplatform;acquire-driver-common")
     endforeach()
 
     #
