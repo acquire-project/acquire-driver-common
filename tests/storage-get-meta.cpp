@@ -1,7 +1,7 @@
 /// @file
 /// @brief Check that all storage devices implement the get_meta function.
-/// Also, since none of the storage devices support chunking, check that this is
-/// reflected in the metadata.
+/// Also, since none of the basic storage devices support chunking or
+/// multiscale, check that this is reflected in the metadata.
 
 #include "platform.h"
 #include "logger.h"
@@ -73,6 +73,7 @@ main()
 
                 CHECK(Device_Ok == storage_get_meta(storage, &metadata));
                 CHECK(0 == metadata.chunking.supported);
+                CHECK(0 == metadata.multiscale.supported);
 
                 CHECK(Device_Ok == driver_close_device(device));
             }

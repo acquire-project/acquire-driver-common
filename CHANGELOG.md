@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Reflect in Storage capabilities interface that basic Storage devices do not support multiscale.
+
 ## [0.1.3](https://github.com/acquire-project/acquire-driver-common/compare/v0.1.2...v0.1.3) - 2023-06-27
 
 ### Changed
