@@ -481,6 +481,7 @@ simcam_set(struct Camera* camera, struct CameraProperties* settings)
                         (uint32_t)meta.shape.y.high),
         .planes = 1,
     };
+    shape->type = settings->pixel_type;
     compute_strides(shape);
 
     self->properties.shape = (struct camera_properties_shape_s){
