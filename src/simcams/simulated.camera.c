@@ -22,7 +22,7 @@
 
 #define MAX_IMAGE_WIDTH (1ULL << 13)
 #define MAX_IMAGE_HEIGHT (1ULL << 13)
-#define MAX_BYTES_PER_PIXEL (2)
+#define MAX_BYTES_PER_PIXEL (4)
 
 #define containerof(ptr, T, V) ((T*)(((char*)(ptr)) - offsetof(T, V)))
 #define countof(e) (sizeof(e) / sizeof(*(e)))
@@ -133,11 +133,12 @@ static struct
 } g_animation_clk = { 0 };
 
 static void
-im_fill_pattern(const struct ImageShape* const shape,
-                float ox,
-                float oy,
-                uint8_t* buf)
+im_fill_pattern_u8(const struct ImageShape* const shape,
+                   float ox,
+                   float oy,
+                   void* buf_)
 {
+    uint8_t* buf = (uint8_t*)buf_;
     float t = get_animation_time_sec();
 
     const float cx = ox + 0.5f * (float)shape->dims.width;
@@ -157,6 +158,136 @@ im_fill_pattern(const struct ImageShape* const shape,
         }
     }
 }
+
+static void
+im_fill_pattern_i8(const struct ImageShape* const shape,
+                   float ox,
+                   float oy,
+                   void* buf_)
+{
+    int8_t* buf = (int8_t*)buf_;
+    float t = get_animation_time_sec();
+
+    const float cx = ox + 0.5f * (float)shape->dims.width;
+    const float cy = oy + 0.5f * (float)shape->dims.height;
+    for (uint32_t y = 0; y < shape->dims.height; ++y) {
+        const float dy = y - cy;
+        const float dy2 = dy * dy;
+        for (uint32_t x = 0; x < shape->dims.width; ++x) {
+            const size_t o = (size_t)shape->strides.width * x +
+                             (size_t)shape->strides.height * y;
+            const float dx = x - cx;
+            const float dx2 = dx * dx;
+            buf[o] = (int8_t)(127.0f *
+                              (sinf(6.28f * (t * 10.0f + (dx2 + dy2) * 1e-2f)) +
+                               1.0f));
+        }
+    }
+}
+
+static void
+im_fill_pattern_u16(const struct ImageShape* const shape,
+                    float ox,
+                    float oy,
+                    void* buf_)
+{
+    uint16_t* buf = (uint16_t*)buf_;
+    float t = get_animation_time_sec();
+
+    const float cx = ox + 0.5f * (float)shape->dims.width;
+    const float cy = oy + 0.5f * (float)shape->dims.height;
+    for (uint32_t y = 0; y < shape->dims.height; ++y) {
+        const float dy = y - cy;
+        const float dy2 = dy * dy;
+        for (uint32_t x = 0; x < shape->dims.width; ++x) {
+            const size_t o = (size_t)shape->strides.width * x +
+                             (size_t)shape->strides.height * y;
+            const float dx = x - cx;
+            const float dx2 = dx * dx;
+            buf[o] =
+              (uint16_t)(127.0f *
+                         (sinf(6.28f * (t * 10.0f + (dx2 + dy2) * 1e-2f)) +
+                          1.0f));
+        }
+    }
+}
+
+static void
+im_fill_pattern_i16(const struct ImageShape* const shape,
+                    float ox,
+                    float oy,
+                    void* buf_)
+{
+    uint16_t* buf = (uint16_t*)buf_;
+    float t = get_animation_time_sec();
+
+    const float cx = ox + 0.5f * (float)shape->dims.width;
+    const float cy = oy + 0.5f * (float)shape->dims.height;
+    for (uint32_t y = 0; y < shape->dims.height; ++y) {
+        const float dy = y - cy;
+        const float dy2 = dy * dy;
+        for (uint32_t x = 0; x < shape->dims.width; ++x) {
+            const size_t o = (size_t)shape->strides.width * x +
+                             (size_t)shape->strides.height * y;
+            const float dx = x - cx;
+            const float dx2 = dx * dx;
+            buf[o] =
+              (int16_t)(127.0f *
+                        (sinf(6.28f * (t * 10.0f + (dx2 + dy2) * 1e-2f)) +
+                         1.0f));
+        }
+    }
+}
+
+static void
+im_fill_pattern_f32(const struct ImageShape* const shape,
+                    float ox,
+                    float oy,
+                    void* buf_)
+{
+    float* buf = (float*)buf_;
+    float t = get_animation_time_sec();
+
+    const float cx = ox + 0.5f * (float)shape->dims.width;
+    const float cy = oy + 0.5f * (float)shape->dims.height;
+    for (uint32_t y = 0; y < shape->dims.height; ++y) {
+        const float dy = y - cy;
+        const float dy2 = dy * dy;
+        for (uint32_t x = 0; x < shape->dims.width; ++x) {
+            const size_t o = (size_t)shape->strides.width * x +
+                             (size_t)shape->strides.height * y;
+            const float dx = x - cx;
+            const float dx2 = dx * dx;
+            buf[o] = (127.0f *
+                      (sinf(6.28f * (t * 10.0f + (dx2 + dy2) * 1e-2f)) + 1.0f));
+        }
+    }
+}
+
+static void
+im_fill_pattern(const struct ImageShape* const shape,
+                float ox,
+                float oy,
+                uint8_t* buf)
+{
+    switch (shape->type) {
+        case SampleType_i8:
+            im_fill_pattern_i8(shape, ox, oy, buf);
+            break;
+        case SampleType_u16:
+            im_fill_pattern_u16(shape, ox, oy, buf);
+            break;
+        case SampleType_i16:
+            im_fill_pattern_i16(shape, ox, oy, buf);
+            break;
+        case SampleType_f32:
+            im_fill_pattern_f32(shape, ox, oy, buf);
+            break;
+        default:
+            im_fill_pattern_u8(shape, ox, oy, buf);
+    }
+}
+
 static float
 get_animation_time_sec()
 {
@@ -290,7 +421,11 @@ simcam_get_meta(const struct Camera* camera,
             .x = { .high = ox, .writable = 1, },
             .y = { .high = oy, .writable = 1, },
         },
-        .supported_pixel_types = (1ULL << SampleType_u8),
+        .supported_pixel_types = (1ULL << SampleType_u8)  |
+                                 (1ULL << SampleType_u16) |
+                                 (1ULL << SampleType_i8)  |
+                                 (1ULL << SampleType_i16) |
+                                 (1ULL << SampleType_f32),
         .digital_lines = {
           .line_count=1,
           .names = { [0] = "Software" },
@@ -325,7 +460,7 @@ simcam_set(struct Camera* camera, struct CameraProperties* settings)
     }
 
     self->properties = *settings;
-    self->properties.pixel_type = SampleType_u8;
+    self->properties.pixel_type = settings->pixel_type;
     self->properties.input_triggers = (struct camera_properties_input_triggers_s){
         .frame_start = { .enable = settings->input_triggers.frame_start.enable,
                          .line = 0, // Software
@@ -506,7 +641,7 @@ simcam_make_camera(enum BasicDeviceKind kind)
               .height=properties.shape.x,
               .planes=properties.shape.x*properties.shape.y,
             },
-            .type=SampleType_u8
+            .type=properties.pixel_type
           },
         },
         .camera={
