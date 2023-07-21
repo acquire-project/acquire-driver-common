@@ -488,6 +488,10 @@ simcam_set(struct Camera* camera, struct CameraProperties* settings)
         .y = shape->dims.height,
     };
 
+    size_t nbytes = aligned_bytes_of_image(shape);
+    self->im.data = malloc(nbytes);
+    EXPECT(self->im.data, "Allocation of %llu bytes failed.", nbytes);
+
     return Device_Ok;
 Error:
     return Device_Err;
@@ -660,8 +664,6 @@ simcam_make_camera(enum BasicDeviceKind kind)
     lock_init(&self->im.lock);
     condition_variable_init(&self->im.frame_ready);
     event_init(&self->software_trigger.event);
-    CHECK(self->im.data =
-            malloc(MAX_IMAGE_WIDTH * MAX_IMAGE_HEIGHT * MAX_BYTES_PER_PIXEL));
 
     return &self->camera;
 Error:
