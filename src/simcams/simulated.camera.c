@@ -53,9 +53,6 @@
 uint8_t
 popcount_u8(uint8_t value);
 
-static float
-get_animation_time_sec();
-
 struct SimulatedCamera
 {
     struct CameraProperties properties;
@@ -120,148 +117,57 @@ im_fill_rand(const struct ImageShape* const shape, uint8_t* buf)
         *(uint32_t*)p = pcg32_random();
 }
 
-/// This is used for animating the parameter in im_fill_pattern.
-/// This timebase gets shared between all "pattern" cameras and as a result they
-/// are synchronized.
-///
-/// Thread safety: Don't really need to worry about since we don't care who
-/// wins during initialization. Afterwards it's effectively read only.
-static struct
-{
-    struct clock clk;
-    int is_initialized;
-} g_animation_clk = { 0 };
-
-static void
+void
 im_fill_pattern_u8(const struct ImageShape* const shape,
                    float ox,
                    float oy,
-                   void* buf_)
-{
-    uint8_t* buf = (uint8_t*)buf_;
-    float t = get_animation_time_sec();
-
-    const float cx = ox + 0.5f * (float)shape->dims.width;
-    const float cy = oy + 0.5f * (float)shape->dims.height;
-    for (uint32_t y = 0; y < shape->dims.height; ++y) {
-        const float dy = y - cy;
-        const float dy2 = dy * dy;
-        for (uint32_t x = 0; x < shape->dims.width; ++x) {
-            const size_t o = (size_t)shape->strides.width * x +
-                             (size_t)shape->strides.height * y;
-            const float dx = x - cx;
-            const float dx2 = dx * dx;
-            buf[o] =
-              (uint8_t)(127.0f *
-                        (sinf(6.28f * (t * 10.0f + (dx2 + dy2) * 1e-2f)) +
-                         1.0f));
-        }
-    }
-}
-
-static void
+                   uint8_t* buf);
+void
 im_fill_pattern_i8(const struct ImageShape* const shape,
                    float ox,
                    float oy,
-                   void* buf_)
-{
-    int8_t* buf = (int8_t*)buf_;
-    float t = get_animation_time_sec();
+                   int8_t* buf);
 
-    const float cx = ox + 0.5f * (float)shape->dims.width;
-    const float cy = oy + 0.5f * (float)shape->dims.height;
-    for (uint32_t y = 0; y < shape->dims.height; ++y) {
-        const float dy = y - cy;
-        const float dy2 = dy * dy;
-        for (uint32_t x = 0; x < shape->dims.width; ++x) {
-            const size_t o = (size_t)shape->strides.width * x +
-                             (size_t)shape->strides.height * y;
-            const float dx = x - cx;
-            const float dx2 = dx * dx;
-            buf[o] = (int8_t)(127.0f *
-                              (sinf(6.28f * (t * 10.0f + (dx2 + dy2) * 1e-2f)) +
-                               1.0f));
-        }
-    }
-}
-
-static void
+void
 im_fill_pattern_u16(const struct ImageShape* const shape,
                     float ox,
                     float oy,
-                    void* buf_)
-{
-    uint16_t* buf = (uint16_t*)buf_;
-    float t = get_animation_time_sec();
+                    uint16_t* buf);
 
-    const float cx = ox + 0.5f * (float)shape->dims.width;
-    const float cy = oy + 0.5f * (float)shape->dims.height;
-    for (uint32_t y = 0; y < shape->dims.height; ++y) {
-        const float dy = y - cy;
-        const float dy2 = dy * dy;
-        for (uint32_t x = 0; x < shape->dims.width; ++x) {
-            const size_t o = (size_t)shape->strides.width * x +
-                             (size_t)shape->strides.height * y;
-            const float dx = x - cx;
-            const float dx2 = dx * dx;
-            buf[o] =
-              (uint16_t)(127.0f *
-                         (sinf(6.28f * (t * 10.0f + (dx2 + dy2) * 1e-2f)) +
-                          1.0f));
-        }
-    }
-}
-
-static void
+void
 im_fill_pattern_i16(const struct ImageShape* const shape,
                     float ox,
                     float oy,
-                    void* buf_)
-{
-    uint16_t* buf = (uint16_t*)buf_;
-    float t = get_animation_time_sec();
+                    int16_t* buf);
 
-    const float cx = ox + 0.5f * (float)shape->dims.width;
-    const float cy = oy + 0.5f * (float)shape->dims.height;
-    for (uint32_t y = 0; y < shape->dims.height; ++y) {
-        const float dy = y - cy;
-        const float dy2 = dy * dy;
-        for (uint32_t x = 0; x < shape->dims.width; ++x) {
-            const size_t o = (size_t)shape->strides.width * x +
-                             (size_t)shape->strides.height * y;
-            const float dx = x - cx;
-            const float dx2 = dx * dx;
-            buf[o] =
-              (int16_t)(127.0f *
-                        (sinf(6.28f * (t * 10.0f + (dx2 + dy2) * 1e-2f)) +
-                         1.0f));
-        }
-    }
-}
-
-static void
+void
 im_fill_pattern_f32(const struct ImageShape* const shape,
                     float ox,
                     float oy,
-                    void* buf_)
-{
-    float* buf = (float*)buf_;
-    float t = get_animation_time_sec();
+                    float* buf);
 
-    const float cx = ox + 0.5f * (float)shape->dims.width;
-    const float cy = oy + 0.5f * (float)shape->dims.height;
-    for (uint32_t y = 0; y < shape->dims.height; ++y) {
-        const float dy = y - cy;
-        const float dy2 = dy * dy;
-        for (uint32_t x = 0; x < shape->dims.width; ++x) {
-            const size_t o = (size_t)shape->strides.width * x +
-                             (size_t)shape->strides.height * y;
-            const float dx = x - cx;
-            const float dx2 = dx * dx;
-            buf[o] = (127.0f *
-                      (sinf(6.28f * (t * 10.0f + (dx2 + dy2) * 1e-2f)) + 1.0f));
-        }
-    }
+static const char*
+sample_type_to_string(enum SampleType type)
+{
+#define XXX(t) [SampleType_##t] = #t
+    // clang-format off
+    static const char* const table[] = {
+        XXX(u8),
+        XXX(u16),
+        XXX(i8),
+        XXX(i16),
+        XXX(f32),
+        XXX(u10),
+        XXX(u12),
+        XXX(u14),
+    };
+    // clang-format on
+#undef XXX
+
+    if (type >= countof(table))
+        return "(unknown)";
+
+    return table[type];
 }
 
 static void
@@ -271,36 +177,25 @@ im_fill_pattern(const struct ImageShape* const shape,
                 uint8_t* buf)
 {
     switch (shape->type) {
+        case SampleType_u8:
+            im_fill_pattern_u8(shape, ox, oy, buf);
+            break;
         case SampleType_i8:
-            im_fill_pattern_i8(shape, ox, oy, buf);
+            im_fill_pattern_i8(shape, ox, oy, (int8_t*)buf);
             break;
         case SampleType_u16:
-            im_fill_pattern_u16(shape, ox, oy, buf);
+            im_fill_pattern_u16(shape, ox, oy, (uint16_t*)buf);
             break;
         case SampleType_i16:
-            im_fill_pattern_i16(shape, ox, oy, buf);
+            im_fill_pattern_i16(shape, ox, oy, (int16_t*)buf);
             break;
         case SampleType_f32:
-            im_fill_pattern_f32(shape, ox, oy, buf);
+            im_fill_pattern_f32(shape, ox, oy, (float*)buf);
             break;
         default:
-            im_fill_pattern_u8(shape, ox, oy, buf);
+            LOGE("Unsupported pixel type for this simcam: %s",
+                 sample_type_to_string(shape->type));
     }
-}
-
-static float
-get_animation_time_sec()
-{
-    float t;
-    {
-        struct clock* const clk = &g_animation_clk.clk;
-        if (!g_animation_clk.is_initialized) {
-            clock_init(clk);
-            g_animation_clk.is_initialized = 1;
-        }
-        t = (float)clock_toc_ms(clk) * 1e-3f;
-    }
-    return t;
 }
 
 static void

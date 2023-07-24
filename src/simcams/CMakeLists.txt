@@ -5,6 +5,7 @@ add_library(${tgt} STATIC
         simulated.camera.h
         simulated.camera.c
         popcount.cpp
+        imfill.pattern.cpp
 )
 target_enable_simd(${tgt})
 target_link_libraries(${tgt} PUBLIC
