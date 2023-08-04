@@ -111,7 +111,7 @@ setup(AcquireRuntime* runtime)
         props.video[0].camera.settings.input_triggers.frame_start.edge =
           TriggerEdge_Rising;
         props.video[0].camera.settings.input_triggers.frame_start.line = i_line;
-        props.video[0].camera.settings.input_triggers.frame_start.enable = 0;
+        props.video[0].camera.settings.input_triggers.frame_start.enable = 1;
     }
 
     OK(acquire_configure(runtime, &props));
@@ -140,7 +140,8 @@ main()
     try {
         runtime = acquire_init(reporter);
         setup(runtime);
-        acquire_start(runtime);
+        OK(acquire_start(runtime));
+        clock_sleep_ms(0, 100);
 
         struct clock t0;
         clock_init(&t0);
@@ -149,10 +150,13 @@ main()
             VideoFrame *beg, *end;
             OK(acquire_map_read(runtime, 0, &beg, &end));
             EXPECT(end == beg, "Expected no available data.");
+
             OK(acquire_execute_trigger(runtime, 0));
             while (end == beg /* && clock_toc_ms(&t0) < 5000.0 */) {
+                clock_sleep_ms(0, 100);
                 OK(acquire_map_read(runtime, 0, &beg, &end));
             }
+            OK(acquire_unmap_read(runtime, 0, (uint8_t*)end - (uint8_t*)beg));
             ASSERT_EQ(int, "%d", frame_count(beg, end), 1);
             LOG("Got a frame");
             ++n;

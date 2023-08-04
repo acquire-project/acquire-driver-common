@@ -31,8 +31,8 @@
 #define LOG(...) L(0, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define LOGE(...) L(1, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 
-#define TRACE(...) L(0, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
-// #define TRACE(...)
+// #define TRACE(...) L(0, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
+#define TRACE(...)
 
 #define ECHO(e)                                                                \
     TRACE("ECHO %s", #e);                                                      \
@@ -77,7 +77,8 @@ struct SimulatedCamera
 
     struct
     {
-        struct event event;
+        int triggered;
+        struct condition_variable trigger_ready;
     } software_trigger;
 
     uint64_t hardware_timestamp;
@@ -268,7 +269,11 @@ simulated_camera_streamer_thread(struct SimulatedCamera* self)
         }
 
         if (self->properties.input_triggers.frame_start.enable) {
-            ECHO(event_wait(&self->software_trigger.event));
+            while (!self->software_trigger.triggered) {
+                ECHO(condition_variable_wait(
+                  &self->software_trigger.trigger_ready, &self->im.lock));
+            }
+            self->software_trigger.triggered = 0;
         }
 
         self->hardware_timestamp = clock_tic(0);
@@ -332,6 +337,9 @@ simcam_get_meta(const struct Camera* camera,
     return Device_Ok;
 }
 
+static enum DeviceStatusCode
+simcam_execute_trigger(struct Camera* camera);
+
 #define clamp(v, L, H) (((v) < (L)) ? (L) : (((v) > (H)) ? (H) : (v)))
 
 static enum DeviceStatusCode
@@ -351,7 +359,7 @@ simcam_set(struct Camera* camera, struct CameraProperties* settings)
     if (self->properties.input_triggers.frame_start.enable &&
         !settings->input_triggers.frame_start.enable) {
         // fire if disabling the software trigger while live
-        event_notify_all(&self->software_trigger.event);
+        simcam_execute_trigger(camera);
     }
 
     self->properties = *settings;
@@ -429,27 +437,32 @@ Error:
 }
 
 static enum DeviceStatusCode
+simcam_execute_trigger(struct Camera* camera)
+{
+    struct SimulatedCamera* self =
+      containerof(camera, struct SimulatedCamera, camera);
+
+    lock_acquire(&self->im.lock);
+    self->software_trigger.triggered = 1;
+    condition_variable_notify_all(&self->software_trigger.trigger_ready);
+    lock_release(&self->im.lock);
+
+    return Device_Ok;
+}
+
+static enum DeviceStatusCode
 simcam_stop(struct Camera* camera)
 {
     struct SimulatedCamera* self =
       containerof(camera, struct SimulatedCamera, camera);
     self->streamer.is_running = 0;
-    event_notify_all(&self->software_trigger.event);
+    simcam_execute_trigger(camera);
     condition_variable_notify_all(&self->im.frame_ready);
 
     TRACE("SIMULATED CAMERA: thread join");
     ECHO(thread_join(&self->streamer.thread));
 
     TRACE("SIMULATED CAMERA: exiting");
-    return Device_Ok;
-}
-
-static enum DeviceStatusCode
-simcam_execute_trigger(struct Camera* camera)
-{
-    struct SimulatedCamera* self =
-      containerof(camera, struct SimulatedCamera, camera);
-    ECHO(event_notify_all(&self->software_trigger.event));
     return Device_Ok;
 }
 
@@ -464,8 +477,6 @@ simcam_get_frame(struct Camera* camera,
     CHECK(*nbytes >= bytes_of_image(&self->im.shape));
     CHECK(self->streamer.is_running);
 
-    // FIXME: software trigger. Could use a bool or maybe just trigger frame
-    // ready
     TRACE("last: %5d current %5d",
           self->im.last_emitted_frame_id,
           self->im.frame_id);
@@ -559,7 +570,7 @@ simcam_make_camera(enum BasicDeviceKind kind)
     thread_init(&self->streamer.thread);
     lock_init(&self->im.lock);
     condition_variable_init(&self->im.frame_ready);
-    event_init(&self->software_trigger.event);
+    condition_variable_init(&self->software_trigger.trigger_ready);
 
     return &self->camera;
 Error:
