@@ -4,6 +4,7 @@
 #include "logger.h"
 #include <cstdio>
 #include <stdexcept>
+#include <string>
 
 void
 reporter(int is_error,
@@ -42,6 +43,25 @@ reporter(int is_error,
 #define DEVOK(e) CHECK(Device_Ok == (e))
 #define OK(e) CHECK(AcquireStatus_Ok == (e))
 
+/// @returns the index of the software trigger line or -1 if none is found
+int
+select_software_trigger_line(const AcquirePropertyMetadata* metadata)
+{
+    // get the software trigger line
+    int i_line = -1;
+    {
+        for (int i = 0; i < metadata->video[0].camera.digital_lines.line_count;
+             ++i) {
+            if (std::strcmp(metadata->video[0].camera.digital_lines.names[i],
+                            "software") == 0)
+                i_line = i;
+        }
+        EXPECT(i_line >= 0, "Did not find software trigger line.");
+        LOG("Software trigger line: %d", i_line);
+    }
+    return i_line;
+}
+
 int
 main()
 {
@@ -58,17 +78,19 @@ main()
 
             DEVOK(device_manager_select(dm,
                                         DeviceKind_Camera,
-                                        SIZED("simulated.*") - 1,
+                                        SIZED("simulated: empty") - 1,
                                         &props.video[0].camera.identifier));
             DEVOK(device_manager_select(dm,
                                         DeviceKind_Storage,
-                                        SIZED("Trash") - 1,
+                                        SIZED("trash") - 1,
                                         &props.video[0].storage.identifier));
 
             OK(acquire_configure(runtime, &props));
 
             AcquirePropertyMetadata metadata = { 0 };
             OK(acquire_get_configuration_metadata(runtime, &metadata));
+
+            int i_line = select_software_trigger_line(&metadata);
 
             props.video[0].camera.settings.binning = 1;
             props.video[0].camera.settings.pixel_type = SampleType_u12;
@@ -79,49 +101,52 @@ main()
             props.video[0].camera.settings.exposure_time_us = 1e4;
             props.video[0].max_frame_count = 1000;
 
+            // Enable Software Trigger
             CHECK(
               props.video[0].camera.settings.input_triggers.frame_start.kind ==
               Signal_Input);
             props.video[0].camera.settings.input_triggers.frame_start.edge =
               TriggerEdge_Rising;
-            props.video[0].camera.settings.input_triggers.frame_start.line = 0;
+            props.video[0].camera.settings.input_triggers.frame_start.line =
+              i_line;
             props.video[0].camera.settings.input_triggers.frame_start.enable =
               1;
-
             OK(acquire_configure(runtime, &props));
             CHECK(
               props.video[0].camera.settings.input_triggers.frame_start.line ==
-              0);
+              i_line);
             CHECK(props.video[0]
                     .camera.settings.input_triggers.frame_start.enable == 1);
 
-            props.video[0].camera.settings.input_triggers.frame_start.line = 1;
-
+            // Invalid line
+            props.video[0].camera.settings.input_triggers.frame_start.line =
+              i_line + 1;
             OK(acquire_configure(runtime, &props));
             CHECK(
               props.video[0].camera.settings.input_triggers.frame_start.line ==
-              1);
+              i_line);
             CHECK(props.video[0]
                     .camera.settings.input_triggers.frame_start.enable == 1);
 
+            // Disable
             props.video[0].camera.settings.input_triggers.frame_start.enable =
               0;
-
             OK(acquire_configure(runtime, &props));
             CHECK(
               props.video[0].camera.settings.input_triggers.frame_start.line ==
-              1);
+              i_line);
             CHECK(props.video[0]
                     .camera.settings.input_triggers.frame_start.enable == 0);
 
-            props.video[0].camera.settings.input_triggers.frame_start.line = 0;
+            // Switch back to Software Trigger
+            props.video[0].camera.settings.input_triggers.frame_start.line =
+              i_line;
             props.video[0].camera.settings.input_triggers.frame_start.enable =
               1;
-
             OK(acquire_configure(runtime, &props));
             CHECK(
               props.video[0].camera.settings.input_triggers.frame_start.line ==
-              0);
+              i_line);
             CHECK(props.video[0]
                     .camera.settings.input_triggers.frame_start.enable == 1);
 
@@ -141,11 +166,11 @@ main()
 
             DEVOK(device_manager_select(dm,
                                         DeviceKind_Camera,
-                                        SIZED("VIEWORKS.*") - 1,
+                                        SIZED("simulated: empty") - 1,
                                         &props.video[0].camera.identifier));
             DEVOK(device_manager_select(dm,
                                         DeviceKind_Storage,
-                                        SIZED("Trash") - 1,
+                                        SIZED("trash") - 1,
                                         &props.video[0].storage.identifier));
 
             OK(acquire_configure(runtime, &props));

@@ -31,8 +31,8 @@
 #define LOG(...) L(0, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define LOGE(...) L(1, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 
-// #define TRACE(...) L(0, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
-#define TRACE(...)
+#define TRACE(...) L(0, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
+// #define TRACE(...)
 
 #define ECHO(e)                                                                \
     TRACE("ECHO %s", #e);                                                      \
@@ -323,7 +323,7 @@ simcam_get_meta(const struct Camera* camera,
                                  (1ULL << SampleType_f32),
         .digital_lines = {
           .line_count=1,
-          .names = { [0] = "Software" },
+          .names = { [0] = "software" },
         },
         .triggers = {
           .frame_start = {.input=1, .output=0,},
@@ -449,7 +449,7 @@ simcam_execute_trigger(struct Camera* camera)
 {
     struct SimulatedCamera* self =
       containerof(camera, struct SimulatedCamera, camera);
-    event_notify_all(&self->software_trigger.event);
+    ECHO(event_notify_all(&self->software_trigger.event));
     return Device_Ok;
 }
 

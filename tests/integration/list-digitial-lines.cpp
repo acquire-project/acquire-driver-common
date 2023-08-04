@@ -1,9 +1,10 @@
+// Checks various trigger setting manipulation on the viewworks camera
 #include "acquire.h"
 #include "device/hal/device.manager.h"
-#include "device/props/components.h"
 #include "logger.h"
-#include "platform.h"
+#include <cstdio>
 #include <stdexcept>
+#include <string>
 
 void
 reporter(int is_error,
@@ -45,31 +46,48 @@ reporter(int is_error,
 int
 main()
 {
-    auto runtime = acquire_init(reporter);
+    AcquireRuntime* runtime = 0;
     try {
-        CHECK(runtime);
-        auto dm = acquire_device_manager(runtime);
-        AcquireProperties props = {};
-        DEVOK(device_manager_select(dm,
-                                    DeviceKind_Camera,
-                                    SIZED("simulated: empty") - 1,
-                                    &props.video[0].camera.identifier));
-        DEVOK(device_manager_select(dm,
-                                    DeviceKind_Storage,
-                                    SIZED("trash") - 1,
-                                    &props.video[0].storage.identifier));
-        props.video[0].camera.settings.input_triggers.frame_start.enable = 1;
-        props.video[0].camera.settings.input_triggers.frame_start.edge =
-          TriggerEdge_Rising;
-        props.video[0].max_frame_count = 10;
-        OK(acquire_configure(runtime, &props));
-        OK(acquire_start(runtime));
-        clock_sleep_ms(0, 500);
-        OK(acquire_abort(runtime));
-        OK(acquire_shutdown(runtime));
+        {
+            runtime = acquire_init(reporter);
+            auto dm = acquire_device_manager(runtime);
+            CHECK(runtime);
+            CHECK(dm);
+
+            AcquireProperties props = {};
+            OK(acquire_get_configuration(runtime, &props));
+
+            DEVOK(device_manager_select(dm,
+                                        DeviceKind_Camera,
+                                        SIZED("simulated: empty") - 1,
+                                        &props.video[0].camera.identifier));
+            DEVOK(device_manager_select(dm,
+                                        DeviceKind_Storage,
+                                        SIZED("trash") - 1,
+                                        &props.video[0].storage.identifier));
+
+            OK(acquire_configure(runtime, &props));
+
+            AcquirePropertyMetadata metadata = { 0 };
+            OK(acquire_get_configuration_metadata(runtime, &metadata));
+
+            // List digital lines
+            int i_line = -1;
+            {
+                for (int i = 0;
+                     i < metadata.video[0].camera.digital_lines.line_count;
+                     ++i) {
+                    LOG("Line %2d: %s",
+                        i,
+                        metadata.video[0].camera.digital_lines.names[i]);
+                }
+            }
+        }
+        LOG("OK");
         return 0;
     } catch (const std::runtime_error& e) {
         ERR("Runtime error: %s", e.what());
+
     } catch (...) {
         ERR("Uncaught exception");
     }
