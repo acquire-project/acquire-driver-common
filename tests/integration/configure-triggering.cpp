@@ -52,8 +52,8 @@ select_software_trigger_line(const AcquirePropertyMetadata* metadata)
     {
         for (int i = 0; i < metadata->video[0].camera.digital_lines.line_count;
              ++i) {
-            if (std::strcmp(metadata->video[0].camera.digital_lines.names[i],
-                            "software") == 0)
+            if (strcmp(metadata->video[0].camera.digital_lines.names[i],
+                       "software") == 0)
                 i_line = i;
         }
         EXPECT(i_line >= 0, "Did not find software trigger line.");
