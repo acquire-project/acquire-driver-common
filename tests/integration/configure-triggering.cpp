@@ -4,7 +4,7 @@
 #include "logger.h"
 #include <cstdio>
 #include <stdexcept>
-#include <string>
+#include <cstring>
 
 void
 reporter(int is_error,
