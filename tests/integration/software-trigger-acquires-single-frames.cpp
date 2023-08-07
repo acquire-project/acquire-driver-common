@@ -7,7 +7,7 @@
 #include "platform.h"
 #include <cstdio>
 #include <stdexcept>
-#include <string>
+#include <cstring>
 
 void
 reporter(int is_error,
@@ -64,7 +64,7 @@ select_software_trigger_line(const AcquirePropertyMetadata* metadata)
     {
         for (int i = 0; i < metadata->video[0].camera.digital_lines.line_count;
              ++i) {
-            if (std::strcmp(metadata->video[0].camera.digital_lines.names[i],
+            if (strcmp(metadata->video[0].camera.digital_lines.names[i],
                             "software") == 0)
                 i_line = i;
         }
