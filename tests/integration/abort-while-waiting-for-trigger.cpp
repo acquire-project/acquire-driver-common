@@ -6,6 +6,7 @@
 #include "device/props/components.h"
 #include "logger.h"
 #include "platform.h"
+#include <cstring>
 #include <stdexcept>
 
 void
@@ -45,6 +46,25 @@ reporter(int is_error,
 #define DEVOK(e) CHECK(Device_Ok == (e))
 #define OK(e) CHECK(AcquireStatus_Ok == (e))
 
+/// @returns the index of the software trigger line or -1 if none is found
+static uint8_t
+select_software_trigger_line(const AcquirePropertyMetadata* metadata)
+{
+    // get the software trigger line
+    int i_line = -1;
+    {
+        for (int i = 0; i < metadata->video[0].camera.digital_lines.line_count;
+             ++i) {
+            if (strcmp(metadata->video[0].camera.digital_lines.names[i],
+                       "software") == 0)
+                i_line = i;
+        }
+        EXPECT(i_line >= 0, "Did not find software trigger line.");
+        LOG("Software trigger line: %d", i_line);
+    }
+    return (uint8_t)i_line;
+}
+
 static void
 setup(AcquireRuntime* runtime)
 {
@@ -63,6 +83,17 @@ setup(AcquireRuntime* runtime)
       TriggerEdge_Rising;
     props.video[0].max_frame_count = 10;
     OK(acquire_configure(runtime, &props));
+
+    AcquirePropertyMetadata metadata = { 0 };
+    OK(acquire_get_configuration_metadata(runtime, &metadata));
+    props.video[0].camera.settings.input_triggers.frame_start = {
+        .line = select_software_trigger_line(&metadata),
+        .enable = 1,
+        .edge = TriggerEdge_Rising,
+        .kind = Signal_Input
+    };
+
+    OK(acquire_configure(runtime, &props));
 }
 
 int
@@ -71,7 +102,7 @@ main()
     auto runtime = acquire_init(reporter);
     try {
         CHECK(runtime);
-
+        setup(runtime);
         OK(acquire_start(runtime));
         clock_sleep_ms(0, 500);
         OK(acquire_abort(runtime));
