@@ -14,7 +14,7 @@ else()
     set(tests
         abort-while-waiting-for-trigger
         configure-triggering
-        list-digitial-lines
+        list-digital-lines
         software-trigger-acquires-single-frames
     )
 
