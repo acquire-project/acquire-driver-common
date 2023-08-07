@@ -87,10 +87,10 @@ setup(AcquireRuntime* runtime)
     AcquirePropertyMetadata metadata = { 0 };
     OK(acquire_get_configuration_metadata(runtime, &metadata));
     props.video[0].camera.settings.input_triggers.frame_start = {
-        .line = select_software_trigger_line(&metadata),
         .enable = 1,
+        .line = select_software_trigger_line(&metadata),
+        .kind = Signal_Input,
         .edge = TriggerEdge_Rising,
-        .kind = Signal_Input
     };
 
     OK(acquire_configure(runtime, &props));
