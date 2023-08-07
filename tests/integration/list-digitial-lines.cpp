@@ -1,4 +1,4 @@
-// Checks various trigger setting manipulation on the viewworks camera
+//! Exercises the api for inspecting digital lines (for trigger assignment)
 #include "acquire.h"
 #include "device/hal/device.manager.h"
 #include "logger.h"

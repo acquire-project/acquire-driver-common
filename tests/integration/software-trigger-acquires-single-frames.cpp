@@ -1,4 +1,6 @@
-// Checks various trigger setting manipulation on the viewworks camera
+//! Test: For simulated cameras, software trigger events should be usable to
+//! control acquisition of single frames.
+
 #include "acquire.h"
 #include "device/hal/device.manager.h"
 #include "device/props/components.h"
@@ -133,6 +135,12 @@ frame_count(const VideoFrame* beg, const VideoFrame* end)
     return i;
 }
 
+static bool
+is_running(AcquireRuntime* runtime)
+{
+    return acquire_get_state(runtime) == DeviceState_Running;
+}
+
 int
 main()
 {
@@ -142,22 +150,32 @@ main()
         runtime = acquire_init(reporter);
         setup(runtime);
         OK(acquire_start(runtime));
-        clock_sleep_ms(0, 100); // delay so camera is awaiting trigger
 
         struct clock t0;
         clock_init(&t0);
         int n = 0;
-        while (acquire_get_state(runtime) == DeviceState_Running) {
+        while (is_running(runtime)) {
             VideoFrame *beg, *end;
+
+            // Haven't triggered yet, so expect no data
             OK(acquire_map_read(runtime, 0, &beg, &end));
             EXPECT(end == beg, "Expected no available data.");
 
             OK(acquire_execute_trigger(runtime, 0));
-            while (end == beg && clock_toc_ms(&t0) < test_timeout_ms) {
-                clock_sleep_ms(0, 100); // delay so camera is awaiting trigger
+
+            // wait for data
+            while (end == beg && is_running(runtime) &&
+                   clock_toc_ms(&t0) < test_timeout_ms) {
+                // delay so loop isn't busy polling
+                clock_sleep_ms(0, 10);
                 OK(acquire_map_read(runtime, 0, &beg, &end));
             }
+
+            if (end == beg && !is_running(runtime))
+                break;
+
             OK(acquire_unmap_read(runtime, 0, (uint8_t*)end - (uint8_t*)beg));
+
             ASSERT_EQ(int, "%d", frame_count(beg, end), 1);
             LOG("Got a frame");
             ++n;

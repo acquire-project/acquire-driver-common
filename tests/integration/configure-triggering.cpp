@@ -1,4 +1,5 @@
-// Checks various trigger setting manipulation on the viewworks camera
+//! Checks various trigger setting manipulation on the simulated camera
+
 #include "acquire.h"
 #include "device/hal/device.manager.h"
 #include "logger.h"

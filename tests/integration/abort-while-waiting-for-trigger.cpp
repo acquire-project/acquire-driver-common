@@ -1,3 +1,6 @@
+//! Test: Aborting an acquisition while waiting for a trigger should return
+//! the runtime to a stopped state without generating errors.
+
 #include "acquire.h"
 #include "device/hal/device.manager.h"
 #include "device/props/components.h"
@@ -42,27 +45,33 @@ reporter(int is_error,
 #define DEVOK(e) CHECK(Device_Ok == (e))
 #define OK(e) CHECK(AcquireStatus_Ok == (e))
 
+static void
+setup(AcquireRuntime* runtime)
+{
+    auto dm = acquire_device_manager(runtime);
+    AcquireProperties props = {};
+    DEVOK(device_manager_select(dm,
+                                DeviceKind_Camera,
+                                SIZED("simulated: empty") - 1,
+                                &props.video[0].camera.identifier));
+    DEVOK(device_manager_select(dm,
+                                DeviceKind_Storage,
+                                SIZED("trash") - 1,
+                                &props.video[0].storage.identifier));
+    props.video[0].camera.settings.input_triggers.frame_start.enable = 1;
+    props.video[0].camera.settings.input_triggers.frame_start.edge =
+      TriggerEdge_Rising;
+    props.video[0].max_frame_count = 10;
+    OK(acquire_configure(runtime, &props));
+}
+
 int
 main()
 {
     auto runtime = acquire_init(reporter);
     try {
         CHECK(runtime);
-        auto dm = acquire_device_manager(runtime);
-        AcquireProperties props = {};
-        DEVOK(device_manager_select(dm,
-                                    DeviceKind_Camera,
-                                    SIZED("simulated: empty") - 1,
-                                    &props.video[0].camera.identifier));
-        DEVOK(device_manager_select(dm,
-                                    DeviceKind_Storage,
-                                    SIZED("trash") - 1,
-                                    &props.video[0].storage.identifier));
-        props.video[0].camera.settings.input_triggers.frame_start.enable = 1;
-        props.video[0].camera.settings.input_triggers.frame_start.edge =
-          TriggerEdge_Rising;
-        props.video[0].max_frame_count = 10;
-        OK(acquire_configure(runtime, &props));
+
         OK(acquire_start(runtime));
         clock_sleep_ms(0, 500);
         OK(acquire_abort(runtime));
