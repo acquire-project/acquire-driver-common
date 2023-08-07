@@ -65,7 +65,7 @@ select_software_trigger_line(const AcquirePropertyMetadata* metadata)
         for (int i = 0; i < metadata->video[0].camera.digital_lines.line_count;
              ++i) {
             if (strcmp(metadata->video[0].camera.digital_lines.names[i],
-                            "software") == 0)
+                       "software") == 0)
                 i_line = i;
         }
         EXPECT(i_line >= 0, "Did not find software trigger line.");
@@ -136,12 +136,13 @@ frame_count(const VideoFrame* beg, const VideoFrame* end)
 int
 main()
 {
+    float test_timeout_ms = 5000.0;
     AcquireRuntime* runtime = 0;
     try {
         runtime = acquire_init(reporter);
         setup(runtime);
         OK(acquire_start(runtime));
-        clock_sleep_ms(0, 100);
+        clock_sleep_ms(0, 100); // delay so camera is awaiting trigger
 
         struct clock t0;
         clock_init(&t0);
@@ -152,8 +153,8 @@ main()
             EXPECT(end == beg, "Expected no available data.");
 
             OK(acquire_execute_trigger(runtime, 0));
-            while (end == beg /* && clock_toc_ms(&t0) < 5000.0 */) {
-                clock_sleep_ms(0, 100);
+            while (end == beg && clock_toc_ms(&t0) < test_timeout_ms) {
+                clock_sleep_ms(0, 100); // delay so camera is awaiting trigger
                 OK(acquire_map_read(runtime, 0, &beg, &end));
             }
             OK(acquire_unmap_read(runtime, 0, (uint8_t*)end - (uint8_t*)beg));
