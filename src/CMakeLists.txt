@@ -17,5 +17,6 @@ target_link_libraries(${tgt} PRIVATE
         simcams
         storage
 )
+target_add_git_versioning(${tgt})
 
 install(TARGETS ${tgt} LIBRARY DESTINATION lib)
