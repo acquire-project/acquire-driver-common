@@ -339,20 +339,6 @@ tiff_destroy(struct Storage*);
 void
 tiff_reserve_image_shape(struct Storage*, const struct ImageShape* shape);
 
-size_t
-bytes_of_type(const enum SampleType type)
-{
-    if (type >= SampleTypeCount)
-        throw std::runtime_error("Invalid pixel type");
-
-    const size_t table[] = { 1, 2, 1, 2, 4, 2, 2, 2 };
-    CHECK(countof(table) == SampleTypeCount);
-
-    return table[type];
-Error:
-    return 0;
-}
-
 StringSection::StringSection()
   : offset(0)
   , capacity(0)

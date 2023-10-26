@@ -86,17 +86,6 @@ struct SimulatedCamera
 };
 
 static size_t
-bytes_of_type(const enum SampleType type)
-{
-    CHECK(0 <= type && type < SampleTypeCount);
-    const size_t table[] = { 1, 2, 1, 2, 4, 2, 2, 2 };
-    CHECK(countof(table) == SampleTypeCount);
-    return table[type];
-Error:
-    return 0;
-}
-
-static size_t
 bytes_of_image(const struct ImageShape* const shape)
 {
     return shape->strides.planes * bytes_of_type(shape->type);
